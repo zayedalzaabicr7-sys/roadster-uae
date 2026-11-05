@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta name="theme-color" content="#060b16"/>
+  <title>SKYBOLT UAE — Sky Match & Open Sky</title>
+  <meta name="description" content="SKYBOLT UAE — flying car soccer and open-sky thruster world. Original game inspired by car-soccer + flying roadster play."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/app.css?v=p8"/>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="menu">
+    <div class="panel">
+      <div class="brand">
+        <div class="mark">⚡</div>
+        <div>
+          <h1>SKY<span>BOLT</span></h1>
+          <small>UAE · سكاي بولت</small>
+        </div>
+      </div>
+      <p class="tag">Flying car soccer in a neon sky arena, plus a free-flight open sky packed with Spire, Loop, Cube, Sphere, Arch, Mega Ramp and more. Original maps &amp; cars built for SKYBOLT.</p>
+      <div class="row">
+        <label for="match-size">Match size</label>
+        <select id="match-size">
+          <option value="1">1v1</option>
+          <option value="2" selected>2v2</option>
+          <option value="3">3v3</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button id="btn-match">⚡ Play Match<small>Skybolt arena vs bots — thrusters, aerials, suction</small></button>
+        <button id="btn-world" class="alt">✈️ Open Sky<small>Free flight UAE sky world — rings, bolts, landmarks</small></button>
+        <button id="btn-garage" class="ghost">🎨 Garage<small>Bolt Coupe · Muscle · Hatch · SUV</small></button>
+        <button id="btn-online" class="ghost">🌐 Online<small>Join this server’s WebSocket lobby</small></button>
+      </div>
+      <p class="credit">Original game · Inspired by Bloxx League + Flying Tesla Roadster play (no copied assets)<br/>Base car-soccer credit lineage: Taejoo Um</p>
+    </div>
+  </div>
+
+  <div id="garage" style="display:none">
+    <div class="panel">
+      <h2 style="margin:0 0 8px;color:var(--gold)">Garage · المرآب</h2>
+      <p class="tag">Pick a Skybolt body. Procedural originals — Bolt Coupe, Muscle, Hatch, SUV with thrusters.</p>
+      <div id="garage-grid"></div>
+      <button class="back" id="btn-back-g">← Back</button>
+    </div>
+  </div>
+
+  <div id="online" style="display:none">
+    <div class="panel">
+      <h2 style="margin:0 0 8px;color:var(--cyan)">Online · أونلاين</h2>
+      <p class="tag">Connect to the same Mac server WebSocket (<code>/ws</code>). Friends on your tunnel can meet here.</p>
+      <div class="row">
+        <label>Username</label>
+        <input id="on-name" maxlength="16" placeholder="Pilot name"/>
+        <button id="btn-connect" style="flex:0">Connect</button>
+      </div>
+      <div id="on-status">Not connected</div>
+      <button class="back" id="btn-back-o">← Back</button>
+    </div>
+  </div>
+
+  <div id="hud-wrap">
+    <div id="topbar">
+      <button id="btn-exit">✕ Menu</button>
+      <button id="btn-fly">✈️ Fly</button>
+    </div>
+    <div id="match-hud">
+      <div id="scoreline"></div>
+      <div id="hudhelp"></div>
+    </div>
+    <div id="countdown"></div>
+    <div id="spd">0 KM/H</div>
+    <div id="boost" style="--b:40"><span>40</span></div>
+    <div id="ctl"></div>
+    <div id="touch" class="touch">
+      <button data-h="up">▲</button>
+      <button data-h="dn">▼</button>
+      <button data-h="boost">🔥</button>
+      <button data-h="jump">⤴</button>
+      <button data-h="brk">BRK</button>
+      <button data-h="gas">GAS</button>
+    </div>
+  </div>
+
+  <div id="results" style="display:none"></div>
+  <div id="toast"></div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="js/host.js?v=p8"></script>
+  <script src="js/sky.js?v=p8"></script>
+  <script src="js/sky_look.js?v=p8"></script>
+  <script src="js/app.js?v=p8"></script>
+</body>
+</html>

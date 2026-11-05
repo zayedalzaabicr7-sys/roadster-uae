@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: roadster-uae
+    runtime: python
+    plan: free
+    buildCommand: "true"
+    startCommand: python server.py
+    envVars:
+      - key: OWNER_KEY
+        sync: false

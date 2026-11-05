@@ -1,0 +1,1 @@
+# stdlib-only server; empty requirements keeps Render Python build happy

@@ -1,0 +1,6 @@
+mpdata/owner.key
+mpdata/*.json
+mpdata/*.log
+__pycache__/
+*.pyc
+.env
