@@ -22,10 +22,11 @@ if _env_key:
     with open(KEYF, 'w') as f: f.write(_env_key)
     os.chmod(KEYF, 0o600)
 elif not os.path.exists(KEYF):
-    with open(KEYF, 'w') as f: f.write(secrets.token_urlsafe(18))
+    with open(KEYF, 'w') as f: f.write(secrets.token_urlsafe(32))
     os.chmod(KEYF, 0o600)
 OWNER_KEY = open(KEYF).read().strip()
-ROLES = jload('roles.json', {})        # name_lower -> 'admin'|'vip'
+ROLES = {}  # admin/VIP roles are disabled: only the owner-key holder has any power
+jsave('roles.json', ROLES)  # wipe any previously saved roles
 BANS = jload('bans.json', [])          # [{name, dev, by, t}]
 SET = jload('settings.json', {'ff': True, 'weapons': True})
 INV = jload('invites.json', {'on': False, 'names': []})
@@ -65,7 +66,7 @@ def log_chat(line):
 class P:
     def __init__(s, w):
         pid_ctr[0] += 1; s.id = pid_ctr[0]; s.w = w; s.name = None; s.dev = ''; s.role = 'player'; s.look = {}; s.car = 'roadster'; s.paint = '#eeeeea'
-        s.x = 0.0; s.y = 0.0; s.z = 170.0; s.yaw = 0.0; s.pitch = 0.0; s.roll = 0.0; s.mode = 'car'; s.anim = ''; s.hp = 100; s.ko = 0; s.god = False; s.muted = False
+        s.x = 0.0; s.y = 0.0; s.z = 170.0; s.yaw = 0.0; s.pitch = 0.0; s.roll = 0.0; s.mode = 'car'; s.anim = ''; s.hp = 100; s.ko = 0; s.god = False; s.muted = False; s.okey = ''
         s.weap = ['fist']; s.ammo = {}; s.cur = 'fist'; s.last = {}; s.chat_t = []; s.st_t = 0; s.vel = 0.0; s.lt = time.time(); s.kills = 0; s.alive = True; s.mg = ''; s.team = 0
     def pub(s):
         return {'id': s.id, 'n': s.name, 'r': s.role, 'x': round(s.x, 2), 'y': round(s.y, 2), 'z': round(s.z, 2), 'yaw': round(s.yaw, 3), 'p': round(s.pitch, 3), 'rl': round(s.roll, 3),
@@ -135,10 +136,15 @@ def rate(p, key, gap):
     if now - p.last.get(key, 0) < gap: return False
     p.last[key] = now; return True
 
+OWNER_CMDS = ('kick', 'ban', 'unban', 'inv_add', 'inv_rm', 'inv_only', 'bans', 'mute', 'unmute', 'heal', 'god', 'give', 'ff', 'weapons')
 def handle_cmd(p, c, tgt, arg):
-    r = RANK[p.role]; t = find(tgt) if tgt else None
+    t = find(tgt) if tgt else None
+    is_owner = p.role == 'owner' and p.okey and secrets.compare_digest(p.okey, OWNER_KEY)
+    r = RANK['owner'] if is_owner else 0
+    if c in ('vip', 'admin', 'demote'): sys_msg(p, 'Admin/VIP roles are disabled - only the owner has admin powers'); return
+    if c in OWNER_CMDS and not is_owner: sys_msg(p, 'No permission (owner only)'); return
     def need(n):
-        if r < n: sys_msg(p, 'No permission'); return False
+        if r < 3: sys_msg(p, 'No permission (owner only)'); return False
         return True
     def outranks():
         if not t: sys_msg(p, 'Player not found'); return False
@@ -174,14 +180,6 @@ def handle_cmd(p, c, tgt, arg):
         p.x, p.y, p.z = o.x + 4, o.y, o.z + 4
         p.w.send({'t': 'pos', 'x': p.x, 'y': p.y, 'z': p.z}); p.w.send({'t': 'invgo', 'mg': o.mg}); sys_msg(o, p.name + ' accepted your invite')
     elif c == 'bans' and need(2): sys_msg(p, 'Bans: ' + (', '.join(b['name'] for b in BANS) or 'none'))
-    elif c in ('vip', 'admin', 'demote') and need(2):
-        if c == 'admin' and r < 3: sys_msg(p, 'Only the owner can make admins'); return
-        if not t: sys_msg(p, 'Player not found'); return
-        if t.role == 'owner' or (RANK[t.role] >= r and t is not p): sys_msg(p, 'Cannot change that role'); return
-        newr = 'player' if c == 'demote' else c
-        if newr == 'player': ROLES.pop(t.name.lower(), None)
-        else: ROLES[t.name.lower()] = newr
-        jsave('roles.json', ROLES); t.role = newr; t.w.send({'t': 'role', 'r': newr}); bcast({'t': 'sys', 'm': t.name + ' is now ' + newr.upper()})
     elif c in ('mute', 'unmute') and need(2) and outranks():
         t.muted = c == 'mute'; bcast({'t': 'sys', 'm': t.name + (' was muted' if t.muted else ' was unmuted')})
     elif c == 'heal' and need(2):
@@ -243,13 +241,12 @@ async def on_msg(p, m):
             bcast({'t': 'leave', 'id': old.id}); old = None
         if old: p.w.send({'t': 'deny', 'm': 'Name "' + name + '" is already online - pick another username'}); return
         if banned(name, dev): p.w.send({'t': 'deny', 'm': 'You are banned'}); return
-        key = str(m.get('key', ''))
-        role = 'owner' if key and secrets.compare_digest(key, OWNER_KEY) else ROLES.get(name.lower(), 'player')
+        key = str(m.get('key', ''))[:128]
+        role = 'owner' if key and len(key) == len(OWNER_KEY) and secrets.compare_digest(key, OWNER_KEY) else 'player'
         if INV.get('on') and RANK[role] < 2 and name.lower() not in [x.lower() for x in INV.get('names', [])]:
             p.w.send({'t': 'deny', 'm': 'This server is invite-only, ask the owner to invite you'}); return
         p.name = name; p.dev = dev
-        p.role = role
-        if p.role == 'owner': pass
+        p.role = role; p.okey = key if role == 'owner' else ''
         p.look = m.get('look') if isinstance(m.get('look'), dict) else {}
         p.car = str(m.get('car', 'roadster'))[:20]; sp = random.choice(SPAWNS[:3]); p.x, p.z = sp
         p.w.send({'t': 'welcome', 'id': p.id, 'role': p.role, 'set': SET, 'pk': [k for k in pickups.values() if not k['away']], 'players': [q.pub() for q in players.values() if q.name and q is not p], 'keyBad': bool(key) and p.role != 'owner'})
@@ -370,7 +367,7 @@ async def ws_session(r, w, req_headers):
         while ws.open:
             op, data = await asyncio.wait_for(ws.recv(), timeout=60)
             if op == 8: break
-            if op == 9: w.write(b'\x8a\x00'); continue
+            if op == 9: w.write(bytes([0x8a, len(data)]) + data if len(data) < 126 else b'\x8a\x00'); continue
             if op != 1: continue
             now = time.time(); msgs = [x for x in msgs if now - x < 1]
             if len(msgs) > 80: continue  # flood guard

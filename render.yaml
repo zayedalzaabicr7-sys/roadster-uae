@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: roadster-uae
+    name: roadster-uae-live
     runtime: python
     plan: free
     buildCommand: "true"
